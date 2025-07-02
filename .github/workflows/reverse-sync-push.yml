@@ -1,9 +1,5 @@
 name: Reverse Sync on Push
 
-env:
-  # will check these files change to create a new patch
-  SYNCED_PATHS: "docs/ theme/ .yarn/ doom.config.yml yarn.lock tsconfig.json package.json sites.yaml"
-
 on:
   push:
     branches:
