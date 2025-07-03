@@ -2860,12 +2860,12 @@ __metadata:
   linkType: hard
 
 "brace-expansion@npm:^1.1.7":
-  version: 1.1.12
-  resolution: "brace-expansion@npm:1.1.12"
+  version: 1.1.11
+  resolution: "brace-expansion@npm:1.1.11"
   dependencies:
     balanced-match: "npm:^1.0.0"
     concat-map: "npm:0.0.1"
-  checksum: 10c0/975fecac2bb7758c062c20d0b3b6288c7cc895219ee25f0a64a9de662dbac981ff0b6e89909c3897c1f84fa353113a721923afdec5f8b2350255b097f12b1f73
+  checksum: 10c0/695a56cd058096a7cb71fb09d9d6a7070113c7be516699ed361317aca2ec169f618e28b8af352e02ab4233fb54eb0168460a40dc320bab0034b36ab59aaad668
   languageName: node
   linkType: hard
 
@@ -4053,14 +4053,14 @@ __metadata:
   linkType: hard
 
 "es-toolkit@npm:^1.37.2":
-  version: 1.38.0
-  resolution: "es-toolkit@npm:1.38.0"
+  version: 1.37.2
+  resolution: "es-toolkit@npm:1.37.2"
   dependenciesMeta:
     "@trivago/prettier-plugin-sort-imports@4.3.0":
       unplugged: true
     prettier-plugin-sort-re-exports@0.0.1:
       unplugged: true
-  checksum: 10c0/1bffc2d8dbe8db45969cf6674a674bdf9d40d803c923b01645b8a433f43f9304b1d369b6cde2a6ef3889a5aa71ddc741bf8e4103b4d4b48a366e04b4b3d30519
+  checksum: 10c0/b00746dc3e93b42adafea7d9a7605ebbe4c8fcc391b803fcb88c6f21151c6ec0f4cc2054292a38f5683b24bfa52330b78d59106883bc06ae294d5e66740625b9
   languageName: node
   linkType: hard
 

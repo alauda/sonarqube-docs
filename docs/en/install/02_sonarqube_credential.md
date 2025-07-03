@@ -10,7 +10,7 @@ This document describes the configuration methods for credentials required by So
 
 - This document applies to SonarQube 9.9.5 and above versions provided by the platform. It is decoupled from the platform using technologies such as Operator.
 
-## PostgreSQL Credentials \{#pg-credentials}
+## PostgreSQL Credentials
 
 Create a Secret, select the Opaque type, and add and fill in the following fields in the configuration items:
 
@@ -48,7 +48,7 @@ Connect to the PG instance using the psql cli and execute the following command 
 create database <database name>;
 ```
 
-## SonarQube Account Credentials \{#sonarqube-credentials}
+## SonarQube Account Credentials
 
 The default login username is `admin` and the password must meet the following requirements:
 
