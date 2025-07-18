@@ -15,6 +15,7 @@ permission:
   roletemplates:
     - docs/shared/roletemplates/*.yaml
 
+editRepoBaseUrl: alauda/sonarqube-docs
 
 releaseNotes:
   queryTemplates:
