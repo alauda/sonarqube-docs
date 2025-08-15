@@ -107,32 +107,32 @@ Command parameter description:
 
 1. Create a new database:
 
-```bash
-psql -U postgres -h 127.0.0.1 -p 5432 -c "CREATE DATABASE sonar_new"
-```
+    ```bash
+    psql -U postgres -h 127.0.0.1 -p 5432 -c "CREATE DATABASE sonar_new"
+    ```
 
 2. Import backup data:
 
-```bash
-psql -U postgres -h 127.0.0.1 -p 5432 -d sonar_new < sonar.dump
-```
+    ```bash
+    psql -U postgres -h 127.0.0.1 -p 5432 -d sonar_new < sonar.dump
+    ```
 
 3. Verify recovery results:
 
-```bash
-psql -U postgres -h 127.0.0.1 -p 5432 -d sonar_new -c "\dt"
-```
+    ```bash
+    psql -U postgres -h 127.0.0.1 -p 5432 -d sonar_new -c "\dt"
+    ```
 
-If you can see the list of data tables, the recovery is successful:
+    If you can see the list of data tables, the recovery is successful:
 
-```
-                   List of relations
- Schema |           Name            | Type  |  Owner
---------+---------------------------+-------+----------
- public | active_rule_parameters    | table | postgres
- public | active_rules              | table | postgres
-...
-```
+    ```
+                      List of relations
+    Schema |           Name            | Type  |  Owner
+    --------+---------------------------+-------+----------
+    public | active_rule_parameters    | table | postgres
+    public | active_rules              | table | postgres
+    ...
+    ```
 
 ### Deploying a New SonarQube Instance
 

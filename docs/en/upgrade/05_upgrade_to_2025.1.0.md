@@ -1,4 +1,4 @@
-# SonarQube Upgrade Guide from 9.9.5.1 to 2025.1.0
+# SonarQube Upgrade Guide from 9.9.5.1 to 2025.1.0 (Alauda Build of SonarQube Operator Version 2025.1.z)
 
 ## Overview
 
@@ -65,27 +65,27 @@ type: Opaque
 
 4. Create a new database secret. The new version secret only needs to store the password:
 
-```bash
-# Note: The password here is the password for the newly deployed PG database
-kubectl create secret -n <namespace> generic sonarqube-db-secret \
-  --from-literal=jdbc-password=<password>
-```
+    ```bash
+    # Note: The password here is the password for the newly deployed PG database
+    kubectl create secret -n <namespace> generic sonarqube-db-secret \
+      --from-literal=jdbc-password=<password>
+    ```
 
 5. Create a new SonarQube instance configuration with database connection information, connecting to the previous PG instance
 
-```yaml
-spec:
-  helmValues:
-    postgresql:
-      enabled: false  # Disable default PostgreSQL
-    jdbcOverwrite:
-      enable: true
-      # jdbcSecretName is the name of the newly created secret
-      jdbcSecretName: sonarqube-db-secret
-      # username, host, port, database are the username, host, port, database of the new PG data
-      jdbcUrl: jdbc:postgresql://<host>:<port>/<database>?socketTimeout=1500
-      jdbcUsername: <username>
-```
+    ```yaml
+    spec:
+      helmValues:
+        postgresql:
+          enabled: false  # Disable default PostgreSQL
+        jdbcOverwrite:
+          enable: true
+          # jdbcSecretName is the name of the newly created secret
+          jdbcSecretName: sonarqube-db-secret
+          # username, host, port, database are the username, host, port, database of the new PG data
+          jdbcUrl: jdbc:postgresql://<host>:<port>/<database>?socketTimeout=1500
+          jdbcUsername: <username>
+    ```
 
 #### 2.2 Storage Configuration
 
@@ -179,7 +179,7 @@ spec:
   externalURL: <new-sonar-url>
 ```
 
-#### Other Configurations
+#### 2.4 Other Configurations
 
 - **Retain Plugins**: The new version needs to retain the old version plugins. Add configuration spec.helmValues.plugins.deleteDefaultPlugins as false
 - SSO Configuration Migration: Reconfigure according to [Deployment Document: SSO Configuration](../install/03_sonarqube_deploy.md#SSO-Configuration)
@@ -222,13 +222,13 @@ spec:
       existingClaim: <spec.persistence.pvc.webServiceExistingClaim from old instance YAML>
 ```
 
-### 5. Manually Perform Data Schema Migration
+### 3. Manually Perform Data Schema Migration
 
 ***Note: Backup the old version data in advance***
 
 Access new-sonar-url/setup and follow the prompts
 
-### 6. Verify Upgrade Results
+### 4. Verify Upgrade Results
 
 Check the following to ensure the upgrade was successful:
 
@@ -237,7 +237,7 @@ Check the following to ensure the upgrade was successful:
 - [ ] Plugin status is normal (some plugins may need to be reinstalled)
 - [ ] Historical analysis data is accessible
 
-### 7. Cleanup Work
+### 5. Cleanup Work
 
 1. After confirming the new instance is running stably, the old instance can be deleted
 2. Adjust the network configuration to be consistent with the original configuration
