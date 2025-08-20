@@ -224,7 +224,12 @@ spec:
 
 ### 3. Manually Perform Data Schema Migration
 
-***Note: Backup the old version data in advance***
+:::warning
+
+1. Backup the old version data in advance.
+2. The instance will be ready only after completing the setup.
+
+:::
 
 Access new-sonar-url/setup and follow the prompts
 
