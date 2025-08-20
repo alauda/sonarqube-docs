@@ -20,10 +20,11 @@ editRepoBaseUrl: alauda/sonarqube-docs
 releaseNotes:
   queryTemplates:
   ## TODO: change the versionMatch for the next releases
-    unfixed: | 
-      project = <%= project %> and affectedVersion in versionMatch("sonarqube-ce-operator-v2025.1.[0-9]") and filter = 18959 AND ACPAffectVersions in (<%= acpversion %>) AND NOT (ACPFixVersions in (<%= acpversion %>) AND status in (Done, Resolved)) AND (labels not in (安全问题) OR labels is EMPTY) and ReleaseNotesStatus = Publish
-    fixed: | 
-      project = <%= project %> and affectedVersion in versionMatch("sonarqube-ce-operator-v2025.1.[0-9]") and filter = 16502 AND (resolution not in ("By Design", "Not a Bug", Duplicate, Rejected, "Cannot Reproduce") OR resolution is EMPTY) AND (ACPFixVersions in (<%= acpversion %>) or fixVersion in versionMatch(<%= acpversion %>)) AND status in (Done, Resolved, 已完成) AND (affectedVersion in versionMatch("3.1[0-8]") OR ((issueFunction in linkedIssuesOf("affectedVersion in versionMatch('3.1[0-8]')", clones) OR issueFunction in linkedIssuesOf("affectedVersion in versionMatch('3.1[0-8]')", "is cloned by")))) and ReleaseNotesStatus = Publish
+    unfixed: |
+      project = <%= project %> AND affectedVersion in ("sonarqube-ce-operator-<%= version %>") AND type = Bug AND status in (Cancelled) AND ReleaseNotesStatus = Publish
+
+    fixed: |
+      project = <%= project %> AND fixVersion in ("sonarqube-ce-operator-<%= version %>") AND type = Bug AND status in (Done, Resolved) AND ReleaseNotesStatus = Publish
 
 translate:
   # 系统提示语，ejs 模板，传入的参数有 `sourceLang`, `targetLang`, `additionalPrompts`
