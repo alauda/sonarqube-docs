@@ -224,6 +224,8 @@ Register an SSO authentication client in the global cluster
 - Create the following OAuth2Client resource in the global cluster to register the SSO authentication client.
 - Configure the SonarQube instance to use SSO authentication
 
+<!-- lint ignore code-block-split-list -->
+
 ```yaml
 apiVersion: dex.coreos.com/v1
 kind: OAuth2Client
