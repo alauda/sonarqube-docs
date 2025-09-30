@@ -253,7 +253,7 @@ spec:
       sonar.auth.oidc.issuerUri: <platform-url>/dex
       sonar.auth.oidc.clientId.secured: sonarqube-dex # Client id
       sonar.auth.oidc.clientSecret.secured: Z2l0bGFiLW9mZmljaWFsLTAK  # Client secret
-      sonar.auth.oidc.loginStrategy: Email
+      sonar.auth.oidc.loginStrategy: Preferred username
       sonar.auth.oidc.providerConfiguration: '{"issuer":"<platform-url>/dex","authorization_endpoint":"<platform-url>/dex/auth","token_endpoint":"<platform-url>/dex/token","jwks_uri":"<platform-url>/dex/keys","response_types_supported":["code","id_token","token"],"subject_types_supported":["public"],"id_token_signing_alg_values_supported":["RS256"],"scopes_supported":["openid","email","groups","profile","offline_access"],"token_endpoint_auth_methods_supported":["client_secret_basic"],"claims_supported":["aud","email","email_verified","exp","iat","iss","locale","name","sub"]}'
 ```
 
@@ -272,7 +272,6 @@ kind: Secret
 metadata:
   name: dex-tls
   namespace: cpaas-system
-type: kubernetes.io/tls
 ```
 
 Edit the SonarQube instance to use this CA:

@@ -4,6 +4,14 @@
 
 This document describes how to upgrade SonarQube from version 9.9.5.1(9.9.6) to 2025.1.0. Since this upgrade involves changes in operator 4.0 version, existing SonarQube instances need to be migrated to the new version operator.
 
+::::tip Migration Duration
+- Larger databases take longer to migrate.
+- Storage performance also affects migration speed — using TopoLVM is recommended for better performance.
+
+Example:
+- SonarQube instance: 574 projects; PostgreSQL PVC usage 87 Gi; migration time ~1 hour
+::::
+
 ## Prerequisites
 
 - New version operator (sonarqube-ce-operator) has been installed in the cluster
