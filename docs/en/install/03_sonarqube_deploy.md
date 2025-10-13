@@ -284,6 +284,22 @@ spec:
       secret: dex-tls
 ```
 
+#### Using in Pure IPv6 Clusters
+
+When deploying in a pure IPv6 cluster environment, you need to explicitly configure IPv6 protocol settings since Java supports dual-stack by default. Add the following configuration to ensure proper connectivity:
+
+```yaml
+spec:
+  helmValues:
+    env:
+      - name: JAVA_TOOL_OPTIONS
+        value: '-Djava.net.preferIPv6Addresses=true'
+    sonarProperties:
+      sonar.cluster.node.search.host: '[::1]'
+      sonar.cluster.node.es.host: '[::1]'
+      sonar.web.javaAdditionalOpts: '-javaagent:/opt/sonarqube/extensions/plugins/sonarqube-community-branch-plugin-1.23.1.jar=web -Djava.net.preferIPv6Addresses=true'
+```
+
 ## Additional Information
 
 ### Kubernetes - Pod Security Standards
