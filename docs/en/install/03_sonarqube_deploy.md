@@ -231,7 +231,7 @@ apiVersion: dex.coreos.com/v1
 kind: OAuth2Client
 name: OIDC
 metadata:
-  name: m5uxi3dbmiwwizlyzpzjzzeeeirsk # This value is calculated based on the hash of the id field, online calculator: https://go.dev/play/p/QsoqUohsKok
+  name: onxw4ylsof2wezjnmrsxrs7sttsiiirdeu # This value is calculated based on the hash of the id field, online calculator: https://go.dev/play/p/QsoqUohsKok
   namespace: cpaas-system
 id: sonarqube-dex # Client id
 public: false
@@ -240,6 +240,15 @@ redirectURIs:
 secret: Z2l0bGFiLW9mZmljaWFsLTAK # Client secret
 spec: {}
 ```
+
+| Field | Description | Example |
+|-------|-------------|---------|
+|name| The display name of the resource. | OIDC |
+|id| The client ID for SSO authentication. Any value is allowed, except alauda-dex, which is reserved and may cause conflicts.| sonarqube-dex |
+|secret| The client secret used for SSO authentication. Can be set to any value. | Z2l0bGFiLW9mZmljaWFsLTAK |
+|redirectURIs | Sonarqube authentication callback URL, formatted as `<sonarqube-host>/*`. | https://example.sonarqube.com/* |
+|metadata.name| The resource name, which must be calculated based on the hash of the `id` field. You can use online hash calculators such as https://go.dev/play/p/QsoqUohsKok to generate it. | onxw4ylsof2wezjnmrsxrs7sttsiiirdeu |
+|metadata.namespace| The platform system namespace, Must be `cpaas-system`. | cpaas-system|
 
 Add the SSO configuration to the SonarQube instance:
 

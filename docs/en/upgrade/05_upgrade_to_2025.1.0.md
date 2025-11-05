@@ -4,13 +4,16 @@
 
 This document describes how to upgrade SonarQube from version 9.9.5.1(9.9.6) to 2025.1.0. Since this upgrade involves changes in operator 4.0 version, existing SonarQube instances need to be migrated to the new version operator.
 
-::::tip Migration Duration
+::: tip Migration Duration
+
 - Larger databases take longer to migrate.
 - Storage performance also affects migration speed — using TopoLVM is recommended for better performance.
 
 Example:
+
 - SonarQube instance: 574 projects; PostgreSQL PVC usage 87 Gi; migration time ~1 hour
-::::
+
+:::
 
 ## Prerequisites
 
@@ -65,12 +68,9 @@ type: Opaque
 ```
 
 1. Perform a complete data backup according to the [backup documentation](../howto/04_sonarqube_backup.md)
-
 2. Create a new PG database for the new SonarQube instance.
-> It is recommended to create a new database for deploying the new SonarQube version to avoid contaminating the old database and ensure the old SonarQube can still function normally
-
+    > It is recommended to create a new database for deploying the new SonarQube version to avoid contaminating the old database and ensure the old SonarQube can still function normally
 3. Migrate the data according to the [backup documentation](../howto/04_sonarqube_backup.md)
-
 4. Create a new database secret. The new version secret only needs to store the password:
 
     ```bash
@@ -99,7 +99,9 @@ type: Opaque
 
 Choose the corresponding configuration based on the storage type used by the old SonarQube instance:
 
-`kubectl get sonarqube.operator.devops.alauda.io <old-sonarqube-name> -n <old-instance-namespace> -o jsonpath='{.spec.persistence.type}'`
+```bash
+kubectl get sonarqube.operator.devops.alauda.io <old-sonarqube-name> -n <old-instance-namespace> -o jsonpath='{.spec.persistence.type}'
+```
 
 **Using StorageClass:**
 
