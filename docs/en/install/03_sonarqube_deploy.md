@@ -7,6 +7,16 @@ weight: 200
 
 This document describes the subscription of SonarQube Operator and the functionality for deploying SonarQube instances.
 
+::: danger Namespace Security Policy Restrictions
+
+SonarQube **does not support** deployment in namespaces with SPA (Security Policy Admission) policy set to `Restricted` or `Baseline` due to the following reasons:
+
+1. **Init Container Requires Root Privileges**: SonarQube uses init containers to initialize PVC directory permissions, which requires root privileges that are not allowed under the `Restricted` policy.
+2. **InitSysctl Requires Privileged Permissions**: By default, SonarQube uses initSysctl containers to configure sysctl parameters (such as `vm.max_map_count` and `fs.file-max`) required by Elasticsearch. This requires `privileged` permissions to modify system-level kernel parameters.
+
+**Recommendation**: Create a dedicated namespace for the SonarQube deployment and ensure that its security policy is set to `privileged`.
+:::
+
 ## Prerequisites
 
 - This document applies to SonarQube 9.9.5 and above versions provided by the platform. It is decoupled from the platform using technologies such as Operator.
@@ -294,7 +304,7 @@ spec:
       secret: dex-tls
 ```
 
-#### Using in Pure IPv6 Clusters
+### Using in Pure IPv6 Clusters
 
 When deploying in a pure IPv6 cluster environment, you need to explicitly configure IPv6 protocol settings since Java supports dual-stack by default. Add the following configuration to ensure proper connectivity:
 
@@ -309,37 +319,3 @@ spec:
       sonar.cluster.node.es.host: '[::1]'
       sonar.web.javaAdditionalOpts: '-javaagent:/opt/sonarqube/extensions/plugins/sonarqube-community-branch-plugin-1.23.1.jar=web -Djava.net.preferIPv6Addresses=true'
 ```
-
-## Additional Information
-
-### Kubernetes - Pod Security Standards
-
-The following section describes the compatibility of SonarQube containers with [Kubernetes Pod Security levels](https://kubernetes.io/docs/concepts/security/pod-security-admission/#pod-security-levels):
-
-By default, SonarQube deployment requires `privileged` permissions. However, when `initSysctl.enabled` is set to `false`, it can run in `baseline` mode.
-
-> **Important Note**: When using node-local storage, deployment is only supported in `privileged` mode.
-
-When `initSysctl.enabled` is set to `false`, the Kubernetes administrator must configure the sysctl-related values at the node level.
-
-For host configuration, refer to [Configuring the host to comply with Elasticsearch](https://docs.sonarsource.com/sonarqube-server/2025.1/setup-and-upgrade/pre-installation/linux/#Elasticsearch). Configuration steps:
-
-```bash
-# Configure memory mapping area limit
-sysctl -w vm.max_map_count=524288
-sysctl -n vm.max_map_count
-
-# Configure system file descriptor limit
-sysctl -w fs.file-max=131072
-sysctl -n fs.file-max
-
-# Configure process file descriptor limit
-ulimit -n 131072
-ulimit -n
-
-# Configure process limit
-ulimit -u 8192
-ulimit -u
-```
-
-When `initSysctl.enabled` is set to `true` (which is the default value), the above sysctl configurations are not required.
