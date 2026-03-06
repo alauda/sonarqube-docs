@@ -6,29 +6,29 @@ weight: 30
 
 ## Version Lifecycle Timeline
 
-Below is the life cycle schedule for released versions of the `Alauda Build of SonarQube` operator:
+Below is the lifecycle timeline for released versions of the `Alauda Build of SonarQube` operator:
 
-| Version  | Release Date  | End of Support  |
-| -------- | ------------- | -------------- |
-| v2025.1.x  | 2025-04-08    | 2026-04-08     |
-
+| Version | Release Date | End of Support |
+| ------- | ------------ | -------------- |
+| v2026.1.z | 2026-03-15 | 2026-03-15   |
+| v2025.1.z | 2025-04-08 | 2026-04-08   |
 
 ## Release Policy
 
-A new version of the `Alauda Build of SonarQube` operator is released every 1 year, updating the operator to the newest [LTA](https://www.sonarsource.com/products/sonarqube/downloads/lts/) version officially released by SonarQube.
+A new version of the `Alauda Build of SonarQube` operator is released every 1 year, updating the operator to the second-latest minor version released by SonarQube (typically using the first patch version for stability). If the SonarQube official team announces a minor version release schedule, we will also adjust our release timeline accordingly.
 
-::: tip Difference Between Alauda and SonarQube Versions
-The SonarQube operator versions released by Alauda are typically 1 to 12 months behind the latest official SonarQube release.
+::: tip Differences Between Alauda and SonarQube Versions
+Alauda's SonarQube operator versions are typically one minor version (4-6 months) behind the latest official SonarQube release.
 :::
 
 ## Maintenance Policy
 
-Alauda provides 18 months of maintenance support for each released version of the SonarQube operator.
+Alauda provides 12 months of maintenance support for each released minor version of the SonarQube operator.
 
-During the maintenance period, Alauda will provide the following services to customers:
+During the maintenance period, the following support is included:
 
-1. Track the patch versions released by SonarQube and promptly provide patches containing bug fixes and security updates.
-2. Provide security updates that comply with Alauda's security standards.
-3. Assist customers in smoothly upgrading the SonarQube operator to new versions.
+1. Follow up on patch versions released by SonarQube official, promptly providing patches that include bug fixes and security updates
+2. Provide security version updates that comply with Alauda's security specifications
+3. Assist customers in smoothly upgrading SonarQube operators to new versions
 
-Additionally, Alauda will release a security update every two months during the maintenance period to ensure the security and stability of the operator.
+Additionally, Alauda will release security version updates every two months during the maintenance period to ensure the security and stability of the operators.

@@ -35,7 +35,7 @@ SonarQube supports various resource configurations to accommodate different cust
 
 Pre-deployment resource planning involves making decisions before deployment that will take effect during the deployment process.
 
-For more recommendations on environmental resources, please refer to the official documentation: https://docs.sonarsource.com/sonarqube-server/2025.1/setup-and-upgrade/installation-requirements/server-host/#hardware
+For more recommendations on environmental resources, please refer to the official documentation: https://docs.sonarsource.com/sonarqube-community-build/server-installation/server-host-requirements
 
 ## Instance Deployment
 
@@ -73,7 +73,7 @@ spec:
         memory: 2Gi
 ```
 
-For more information, refer to [Resource description in SonarQube Chart](https://github.com/SonarSource/helm-chart-sonarqube/blob/sonarqube-2025.1.0-sonarqube-dce-2025.1.0/charts/sonarqube/values.yaml#L454)
+For more information, refer to [Resource description in SonarQube Chart](https://github.com/SonarSource/helm-chart-sonarqube/blob/sonarqube-2026.1.0-sonarqube-dce-2026.1.0/charts/sonarqube/values.yaml#L464)
 
 #### Network Configuration
 
@@ -272,7 +272,7 @@ spec:
       sonar.auth.oidc.issuerUri: <platform-url>/dex
       sonar.auth.oidc.clientId.secured: sonarqube-dex # Client id
       sonar.auth.oidc.clientSecret.secured: Z2l0bGFiLW9mZmljaWFsLTAK  # Client secret
-      sonar.auth.oidc.loginStrategy: Email
+      sonar.auth.oidc.loginStrategy: Preferred username
       sonar.auth.oidc.providerConfiguration: '{"issuer":"<platform-url>/dex","authorization_endpoint":"<platform-url>/dex/auth","token_endpoint":"<platform-url>/dex/token","jwks_uri":"<platform-url>/dex/keys","response_types_supported":["code","id_token","token"],"subject_types_supported":["public"],"id_token_signing_alg_values_supported":["RS256"],"scopes_supported":["openid","email","groups","profile","offline_access"],"token_endpoint_auth_methods_supported":["client_secret_basic"],"claims_supported":["aud","email","email_verified","exp","iat","iss","locale","name","sub"]}'
 ```
 
@@ -291,7 +291,6 @@ kind: Secret
 metadata:
   name: dex-tls
   namespace: cpaas-system
-type: kubernetes.io/tls
 ```
 
 Edit the SonarQube instance to use this CA:
@@ -317,5 +316,5 @@ spec:
     sonarProperties:
       sonar.cluster.node.search.host: '[::1]'
       sonar.cluster.node.es.host: '[::1]'
-      sonar.web.javaAdditionalOpts: '-javaagent:/opt/sonarqube/extensions/plugins/sonarqube-community-branch-plugin-1.23.1.jar=web -Djava.net.preferIPv6Addresses=true'
+      sonar.web.javaAdditionalOpts: '-javaagent:/opt/sonarqube/extensions/plugins/sonarqube-community-branch-plugin-26.1.0.jar=web -Djava.net.preferIPv6Addresses=true'
 ```
