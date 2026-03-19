@@ -14,10 +14,6 @@ weight: 100
 
 This document applies to SonarQube 9.9.5 and above versions.
 
-:::warning
-This document has been verified with SonarQube 9.9.5. While the procedures should theoretically work with version 25.1.0, they have not yet been practically validated with this version. Please test in a non-production environment first if you're using SonarQube 25.1.0.
-:::
-
 ## Overview
 
 SonarQube data primarily consists of two parts:
