@@ -225,7 +225,7 @@ spec:
       existingClaim: sonarqube-pvc
 ```
 
-### SSO Configuration
+### SSO Configuration {#SSO-Configuration}
 
 Configuring SSO involves the following steps:
 
