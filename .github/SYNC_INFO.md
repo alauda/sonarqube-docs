@@ -1,10 +1,10 @@
 # Documentation Sync Information
 
-- **Last synced**: 2026-04-23 07:01:56 UTC
+- **Last synced**: 2026-04-28 06:28:02 UTC
 - **Source repository**: alaudadevops/sonarqube-ce-operator
-- **Source commit**: [1e3ebf30d0b02c64855af70f4662db808e1084b3](https://github.com/alaudadevops/sonarqube-ce-operator/commit/1e3ebf30d0b02c64855af70f4662db808e1084b3)
-- **Triggered by**: kycheng
-- **Workflow run**: [#41](https://github.com/alaudadevops/sonarqube-ce-operator/actions/runs/24821688588)
+- **Source commit**: [45664cee4aeefa908ce317278770945285767908](https://github.com/alaudadevops/sonarqube-ce-operator/commit/45664cee4aeefa908ce317278770945285767908)
+- **Triggered by**: edge-katanomi-app2[bot]
+- **Workflow run**: [#43](https://github.com/alaudadevops/sonarqube-ce-operator/actions/runs/25037543360)
 
 ## Files synced:
 - docs/
