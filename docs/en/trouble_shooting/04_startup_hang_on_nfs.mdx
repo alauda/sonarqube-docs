@@ -1,0 +1,106 @@
+# SonarQube Pod Hangs on Startup When Data Volume Is Backed by NFS
+
+## Problem Description
+
+A SonarQube instance whose data volume is backed by an NFS export does not become Ready. Symptoms include:
+
+- The PostgreSQL Pod is healthy and not restarting.
+- The SonarQube Pod is `Running` or stuck in a startup loop, but never reports Ready.
+- The Pod log advances during initialization and then hangs at a step that reads or writes files under `/opt/sonarqube/data`. No exception is thrown — the process simply stops producing output for an extended period.
+- File mode and ownership inside the Pod may look different from a non-NFS environment, but changing them does not help.
+
+The NFS export itself is configured with the expected options (for example `rw,async,no_root_squash,no_all_squash`) and the export is reachable from the cluster.
+
+## Root Cause
+
+SonarQube and its embedded Elasticsearch require **file locking** to coordinate access to their on-disk state. By default, NFSv3 mounts negotiate locks through `rpc.lockd` / `rpc.statd`. If the lock daemons are not reachable from the client (commonly because they are not exposed through the network policy, or the NFS server does not run them), file-lock operations issued by SonarQube block indefinitely. The Pod stays alive but cannot make progress, which presents as a "startup hang."
+
+The mount option that asks the client to handle locks locally instead of contacting the server is `nolock`. With `nolock` in effect, file locks become process-local — sufficient for a single-Pod SonarQube — and startup proceeds normally.
+
+## Troubleshooting
+
+### Step 1 — Confirm the Pod is hanging on a filesystem operation
+
+```bash
+kubectl -n <NAMESPACE> logs <RELEASE>-sonarqube-xxxxx
+```
+
+A log that stops mid-step (most often during Elasticsearch initialization or initial index creation under `/opt/sonarqube/data`) and produces no further output for several minutes is the typical fingerprint.
+
+### Step 2 — Check the mount options on the node
+
+Identify the node hosting the SonarQube Pod and inspect the mount options for the NFS export backing the SonarQube data PVC:
+
+```bash
+kubectl -n <NAMESPACE> get pod <RELEASE>-sonarqube-xxxxx -o wide
+
+# On the listed node
+mount | grep nfs
+```
+
+If the mount options do not include `nolock`, the issue likely applies. The presence of options like `local_lock=none` or no `lock` entry at all is consistent with the failure mode.
+
+### Step 3 — Rule out an export-side misconfiguration first
+
+If the export is missing `rw`, `no_root_squash`, or `no_all_squash`, fix that first — those are different failure modes and will not be fixed by `nolock`. Only proceed to the solution below after confirming the export options are correct and the Pod can read and write files (just not lock them).
+
+## Solution
+
+Add `nolock` to the mount options of the NFS PV used by SonarQube, then restart the SonarQube Pod so it remounts with the new options.
+
+### When using a manually provisioned NFS PV
+
+Edit the PersistentVolume and add `nolock` to `spec.mountOptions`:
+
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: <PV_NAME>
+spec:
+  mountOptions:
+    - nolock
+    # other existing options (e.g. nfsvers=4.1, rw, ...)
+  nfs:
+    server: <NFS_SERVER>
+    path: <EXPORT_PATH>
+  # ...
+```
+
+### When using a dynamic NFS StorageClass
+
+Edit the StorageClass and add `nolock` to its `mountOptions`, then recreate the PVC (and the Pod) so the new options take effect on the freshly provisioned PV:
+
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: <STORAGE_CLASS_NAME>
+mountOptions:
+  - nolock
+provisioner: <NFS_PROVISIONER>
+# ...
+```
+
+### Apply the change
+
+After updating the PV or StorageClass, recreate the SonarQube Pod so the volume is remounted:
+
+```bash
+kubectl -n <NAMESPACE> delete pod <RELEASE>-sonarqube-xxxxx
+```
+
+Confirm the new mount options are in effect on the node, then watch the Pod come up:
+
+```bash
+# On the node now hosting the new Pod
+mount | grep nfs    # expect to see nolock
+
+kubectl -n <NAMESPACE> get pods -w
+```
+
+## Notes
+
+- **`nolock` is safe for a single-Pod SonarQube.** SonarQube runs as a single Pod against its data volume, so process-local locks are sufficient. Do not use `nolock` for workloads that genuinely need cross-node coordination through NFS locks.
+- **NFSv4.** On NFSv4, file locking is part of the protocol itself and does not require `rpc.lockd` / `rpc.statd`. If the export is reachable as NFSv4 (`vers=4` / `vers=4.1`) and locking still hangs, look for an unrelated cause before applying `nolock`.
+- **Reference.** Red Hat's documentation of NFS mount options describes `nolock` and the rest of the option set: [Mounting NFS shares](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/8/html/managing_file_systems/mounting-nfs-shares_managing-file-systems).

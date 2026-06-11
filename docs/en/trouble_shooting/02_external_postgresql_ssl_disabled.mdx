@@ -1,0 +1,78 @@
+# Connecting to External PostgreSQL Fails with `SSL is not enabled on the server`
+
+## Problem Description
+
+When a SonarQube instance is configured to use an external PostgreSQL database, the SonarQube Pod fails to start and its logs contain a message similar to:
+
+```
+org.postgresql.util.PSQLException: The server does not support SSL.
+```
+
+or
+
+```
+FATAL: no pg_hba.conf entry for host "...", user "...", database "...", SSL on
+```
+
+The SonarQube UI never becomes available because the web process exits during database initialization.
+
+## Root Cause
+
+The PostgreSQL JDBC driver defaults to negotiating SSL on every new connection. If the target PostgreSQL has SSL disabled (or is not configured to accept TLS handshakes from this client), the driver aborts with `The server does not support SSL` and the SonarQube Pod cannot finish starting.
+
+The fix is to tell the JDBC driver not to attempt SSL, by setting `sslmode=disable` on the JDBC URL.
+
+## Troubleshooting
+
+Check the SonarQube Pod logs:
+
+```bash
+kubectl -n <NAMESPACE> logs <RELEASE>-sonarqube-xxxxx
+```
+
+If the log mentions `The server does not support SSL` or `SSL is not enabled on the server`, the issue applies.
+
+You can independently confirm whether the target PostgreSQL accepts SSL with `psql` from any host that can reach it:
+
+```bash
+PGSSLMODE=require psql "host=<PG_HOST> port=<PG_PORT> user=<PG_USER> dbname=<PG_DATABASE>"
+```
+
+If this command fails with an SSL-related error, the server does not support SSL on this connection and the workaround below applies.
+
+## Solution
+
+Append `sslmode=disable` as a query parameter on the JDBC URL declared on the SonarQube CR. The other JDBC parameters (`socketTimeout`, etc.) are kept; `sslmode` is added with `&`:
+
+```yaml
+apiVersion: operator.alaudadevops.io/v1alpha1
+kind: Sonarqube
+metadata:
+  name: <RELEASE>
+  namespace: <NAMESPACE>
+spec:
+  helmValues:
+    jdbcOverwrite:
+      enable: true
+      jdbcSecretName: <PG_SECRET_NAME>
+      jdbcUrl: jdbc:postgresql://<PG_HOST>:<PG_PORT>/<PG_DATABASE>?socketTimeout=1500&sslmode=disable
+      jdbcUsername: <PG_USER>
+```
+
+The referenced secret only needs to carry the password — see [Configuring PostgreSQL and Account Access Credentials](../install/02_sonarqube_credential.md) for the canonical secret schema. The relevant key is `jdbc-password`:
+
+```bash
+kubectl -n <NAMESPACE> create secret generic <PG_SECRET_NAME> \
+  --from-literal=jdbc-password=<PG_PASSWORD>
+```
+
+Apply the change to the CR. The operator reconciles the new `jdbcUrl` into the SonarQube ConfigMap; recreate the SonarQube Pod so the JDBC connection is re-established with the new mode:
+
+```bash
+kubectl -n <NAMESPACE> rollout restart deployment <RELEASE>-sonarqube
+```
+
+## Notes
+
+- Disabling SSL is appropriate when SonarQube and PostgreSQL communicate over a trusted private network. For deployments where the database traffic crosses an untrusted boundary, configure SSL on the PostgreSQL side and leave `sslmode` off the URL (the driver's default of `prefer` will then succeed).
+- The supported `sslmode` values follow the standard libpq convention (`disable`, `allow`, `prefer`, `require`, `verify-ca`, `verify-full`). Pick the value that matches the database's actual TLS configuration.

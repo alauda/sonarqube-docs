@@ -37,6 +37,16 @@ Pre-deployment resource planning involves making decisions before deployment tha
 
 For more recommendations on environmental resources, please refer to the official documentation: https://docs.sonarsource.com/sonarqube-community-build/server-installation/server-host-requirements
 
+#### Do not use network storage as a storage backend
+
+Do not use network storage-backed StorageClass, PVC, or other remote-mounted storage for SonarQube persistence in production environments. SonarQube uses Elasticsearch internally, and the official SonarSource host requirements state that remote-mounted storage, such as NFS, SMB/CIFS, or NAS, should not be used for the SonarQube `data` directory because it is often slower, has higher latency variance, and becomes a single point of failure. The official document also describes the affected path as `<sonarqubeHome>/data`, where Elasticsearch indices are stored and where high I/O performance is required.
+
+When planning storage for SonarQube, use local node storage or block storage with good read/write performance instead of a network storage-backed storage class. If a StorageClass is selected in the deployment template, confirm with the storage provider that it is not backed by remote-mounted file storage.
+
+Related references:
+
+- Official documentation: [SonarQube Server host requirements > Hardware configuration recommendations > Disk](https://docs.sonarsource.com/sonarqube-server/server-installation/server-host-requirements#hardware-recommendations)
+
 ## Instance Deployment
 
 ### Deploying from the `Quickstart Template` Template
@@ -117,6 +127,10 @@ Storage configurations are mainly divided into three categories:
 - Storage configuration based on HostPath
 
 Storage configuration based on StorageClass:
+
+::: warning
+Do not select a network storage-backed StorageClass for SonarQube persistence. Use a storage backend with low latency and strong read/write performance.
+:::
 
 ```yaml
 spec:

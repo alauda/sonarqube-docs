@@ -1,0 +1,112 @@
+# SonarQube Pod Fails to Start Due to Elasticsearch Index Issues
+
+## Problem Description
+
+The SonarQube Pod fails to become Ready and restarts repeatedly. Common symptoms include:
+
+- The Pod is in `CrashLoopBackOff`, with restart counts increasing every few minutes.
+- The Pod log contains a `NullPointerException` thrown from `org.sonar.server.es.IndexCreator` during startup.
+
+- The Pod log shows startup hanging on Elasticsearch data recovery, for example:
+
+  ```
+  Elasticsearch is launching, waiting for recovery to complete
+  ```
+
+  with the Pod eventually killed by the liveness or readiness probe.
+
+PostgreSQL is healthy in these cases (its Pod is Running and not restarting); only the SonarQube Pod is unhealthy.
+
+## Root Cause
+
+SonarQube embeds an Elasticsearch instance under `/opt/sonarqube/data/es8` (the directory matches the embedded Elasticsearch major version; older SonarQube versions used `es7`). Two related conditions can prevent startup:
+
+- **Corrupted Elasticsearch index.** The index files are in an inconsistent state — typically after an unclean shutdown, storage outage, or running out of disk space. SonarQube cannot open the index and the web process aborts. With a brand-new instance this surfaces as the `IndexCreator` `NullPointerException`; with an existing instance it surfaces as a startup loop.
+- **Slow recovery killed by probes.** Elasticsearch is able to recover the index, but takes longer than the liveness or readiness probe allows, so the Pod is killed mid-recovery and the cycle repeats.
+
+Elasticsearch data in SonarQube is **derived state**. It is rebuilt automatically from PostgreSQL on the next start, so removing the index does not lose user data — it only delays the first startup while the index is recreated.
+
+## Troubleshooting
+
+### Step 1 — Distinguish "slow recovery" from "corrupted index"
+
+Inspect the recent restart history and the cause of each restart:
+
+```bash
+kubectl -n <NAMESPACE> describe pod <RELEASE>-sonarqube-xxxxx
+```
+
+- If you see `Last State: Terminated` with `Reason: Error` immediately after a probe failure (e.g. `Liveness probe failed`), and the log was last printing recovery progress, the Pod is being killed mid-recovery. Treat this as **slow recovery**.
+- If the log ends with a stack trace (for example `NullPointerException` from `IndexCreator`, or an `IndexNotFoundException`) and the Pod restarts without any probe failure event, treat this as **corrupted index**.
+
+### Step 2 — Check the Pod log for the failing component
+
+```bash
+kubectl -n <NAMESPACE> logs <RELEASE>-sonarqube-xxxxx --previous
+```
+
+Confirm the failure originates in the SonarQube process (not PostgreSQL). The relevant lines reference `IndexCreator`, `ElasticSearch`, or `es7`/`es8` paths.
+
+## Solution
+
+Pick the option that matches Step 1.
+
+### Option A — Give recovery more time (slow recovery)
+
+If the Pod is being killed mid-recovery, temporarily relax or remove the liveness and readiness probes so the Pod is not restarted during the long first recovery. Edit the SonarQube Deployment (you may need to set `skip-sync: "true"` as an annotation on the Deployment to prevent the operator from reverting your change):
+
+```bash
+kubectl -n <NAMESPACE> annotate deployment <RELEASE>-sonarqube skip-sync=true --overwrite
+kubectl -n <NAMESPACE> edit deployment <RELEASE>-sonarqube
+```
+
+Remove or significantly raise `initialDelaySeconds` / `failureThreshold` on `livenessProbe` and `readinessProbe`, then wait for the Pod to finish recovering and become Ready. Once stable, remove the `skip-sync` annotation so the original probe configuration is restored on the next reconcile.
+
+### Option B — Reset the Elasticsearch index (corrupted index)
+
+Delete the on-disk index so SonarQube rebuilds it on the next start. The exact procedure depends on how the data volume is provisioned:
+
+#### B.1 — From inside the running Pod (PVC or ephemeral storage)
+
+```bash
+kubectl -n <NAMESPACE> exec -it <RELEASE>-sonarqube-xxxxx -- bash
+
+# Inside the Pod
+cd /opt/sonarqube/data
+ls       # confirm the directory name (typically es8 on SonarQube 9+)
+mv es8 es8.bak
+exit
+
+# Restart the Pod so SonarQube rebuilds the index
+kubectl -n <NAMESPACE> delete pod <RELEASE>-sonarqube-xxxxx
+```
+
+If the Pod cannot stay up long enough to exec into, scale the Deployment down, mount the PVC into a debug Pod (`kubectl debug` or a small Pod manifest that mounts the same PVC), perform the rename there, then scale the original Deployment back up.
+
+#### B.2 — When using `localpath` storage
+
+Log in to the node hosting the SonarQube Pod, locate the SonarQube data directory under the node's `localpath` root, and rename or remove the `es*` directory:
+
+```bash
+# On the node hosting the Pod
+ls /<LOCALPATH_ROOT>/<NAMESPACE>/<PVC_NAME>/
+mv /<LOCALPATH_ROOT>/<NAMESPACE>/<PVC_NAME>/es8 /<LOCALPATH_ROOT>/<NAMESPACE>/<PVC_NAME>/es8.bak
+```
+
+Then trigger a Pod restart:
+
+```bash
+kubectl -n <NAMESPACE> delete pod <RELEASE>-sonarqube-xxxxx
+```
+
+### Step 3 — Verify recovery
+
+Wait for the Pod to become Ready, then confirm in the SonarQube UI that projects, issues, and rules render correctly. The first scan after a reindex may take longer than usual because the index is being repopulated.
+
+If the index is reset and the Pod still fails to start, the failure is not an Elasticsearch problem — re-check the Pod log for the underlying error before retrying.
+
+## Notes
+
+- **Storage space.** Both failure modes are commonly triggered by the data volume running out of disk. Before deciding the index is corrupted, check `df -h /opt/sonarqube/data` inside the Pod (or the equivalent path on the node) and increase the volume size if it is full.
+- **Backups.** The `es8.bak` directory created in Option B can be deleted once SonarQube is stable again. Keep it until then in case rollback is needed.
+- **Official guidance.** SonarQube's documented procedure for forcing an Elasticsearch reindex is the upstream reference for this scenario: see [Reindexing](https://docs.sonarsource.com/sonarqube/latest/instance-administration/reindexing/).
