@@ -14,9 +14,28 @@ The following table shows the compatibility and support matrix between the Alaud
 
 | Alauda Build of SonarQube Operator Version | SonarQube Version |  ACP Version |
 | --------------------------------- | --------------- | --------------- |
+| v2026.1.2                        | v2026.1.0         | v4.0,v4.1,v4.2,v4.3 |
 | v2026.1.1                        | v2026.1.0         | v4.0,v4.1,v4.2,v4.3 |
 | v2026.1.0                        | v2026.1.0         | v4.0,v4.1,v4.2 |
 
+
+## v2026.1.2
+
+### Features and Enhancements
+
+**Security Updates:** This release includes important security patches to address potential vulnerabilities in the operator and its dependencies.
+
+Key improvements in this release:
+
+- **RBAC Hardening**: Removed wildcard verb permissions that previously granted `bind`, `escalate`, and `impersonate` capabilities, reducing the operator's privilege surface.
+
+### Fixed Issues
+
+{/* release-notes-for-bugs?template=fixed&project=DEVOPS&version=v2026.1.2 */}
+
+### Known Issues
+
+{/* release-notes-for-bugs?template=unfixed&project=DEVOPS&version=v2026.1.2 */}
 
 ## v2026.1.1
 
