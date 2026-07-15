@@ -1,0 +1,78 @@
+# Scan Upload Fails with `IOException: The temporary upload location is not valid`
+
+## Problem Description
+
+When a CI pipeline (or a manual `sonar-scanner` run) submits a scan report to SonarQube, the upload fails with an HTTP 500 from the `/api/ce/submit` endpoint and the SonarQube `web.log` shows:
+
+```
+java.io.IOException: The temporary upload location [/opt/sonarqube/temp/tc/work/Tomcat/localhost/ROOT] is not valid
+        at org.apache.catalina.connector.Request.parseParts(Request.java:2530)
+        ...
+```
+
+The analysis is never queued in the **Background Tasks** page. The SonarQube UI itself remains usable for other operations — the failure is specific to ingestion of new scan reports that include a `report` multipart file.
+
+On older SonarQube releases the same root cause sometimes surfaced as an HTTP 400 response carrying `ERROR: The report parameter is missing`. The recovery procedure below is the same in both cases.
+
+## Root Cause
+
+SonarQube's web tier embeds Tomcat (`org.sonar.server.app.EmbeddedTomcat`) and stores the uploaded report file as a multipart temporary upload before handing it to the Compute Engine. The temporary location lives under Tomcat's working directory:
+
+```
+/opt/sonarqube/temp/tc/work/Tomcat/localhost/ROOT/
+```
+
+If this directory does not exist (commonly after a manual edit inside the Pod, after a partial volume restore, or when a misconfigured volume mount has replaced part of the temp tree), Tomcat refuses to parse the multipart request and throws `IOException: The temporary upload location [...] is not valid` **before** the SonarQube controller is invoked. The 500 propagates back to the scanner.
+
+## Troubleshooting
+
+### Step 1 — Confirm the symptom in `web.log`
+
+```bash
+kubectl -n <NAMESPACE> exec <RELEASE>-sonarqube-xxxxx -- \
+  tail -200 /opt/sonarqube/logs/web.log
+```
+
+A stack trace containing `The temporary upload location` and `Request.parseParts` is the diagnostic fingerprint. If the log shows a different error (authentication failure, unknown project, scanner version mismatch), this entry does not apply.
+
+### Step 2 — Confirm the directory state inside the Pod
+
+```bash
+kubectl -n <NAMESPACE> exec <RELEASE>-sonarqube-xxxxx -- \
+  ls -ld /opt/sonarqube/temp/tc/work/Tomcat/localhost/ROOT/
+```
+
+- If the path does not exist, the issue applies.
+- If the path exists but its owner does not match the runtime UID/GID of the SonarQube process, the issue also applies. On the standard image the Pod is started with `runAsUser: 1000` / `runAsGroup: 1000`, and the existing files under `temp/tc` are owned `1000:1000` (the group prints numerically because the image's `/etc/group` has no entry for gid 1000).
+
+## Solution
+
+Pick one of the two options below.
+
+### Option A — Recreate the directory in place
+
+Recreate the missing directory inside the Pod and restore ownership so the SonarQube process can write to it:
+
+```bash
+kubectl -n <NAMESPACE> exec <RELEASE>-sonarqube-xxxxx -- bash -lc '
+  mkdir -p /opt/sonarqube/temp/tc/work/Tomcat/localhost/ROOT/
+  chown -R 1000:1000 /opt/sonarqube/temp/tc
+'
+```
+
+Re-run the failing scan. The upload should now return HTTP 200 with a `taskId`, and the analysis should appear in the Background Tasks page.
+
+### Option B — Restart the SonarQube Pod
+
+Because `/opt/sonarqube/temp` is recreated from scratch when SonarQube starts, restarting the Pod produces the same effect as Option A and avoids hand-editing files inside a running container:
+
+```bash
+kubectl -n <NAMESPACE> rollout restart deployment <RELEASE>-sonarqube
+```
+
+Wait for the new Pod to become Ready, then re-run the scan.
+
+## Notes
+
+- **Do not mount over `/opt/sonarqube/temp`.** This path is a runtime scratch area and must not be backed by a persistent volume or replaced by an emptyDir from a different container. If a custom mount has been added on top of it, removing the mount is the durable fix; Options A and B will only paper over the symptom until the next Pod restart.
+- **Disk pressure.** If the temp directory keeps disappearing or write attempts continue to fail after the directory exists, check whether the Pod's writable layer (or the volume mounted at `/opt/sonarqube/temp`, if any) has run out of space.

@@ -1,0 +1,31 @@
+---
+title: Disaster Recovery
+weight: 105
+---
+
+SonarQube is a stateful service that stores your projects and code-analysis data, so you must plan disaster recovery (DR) for it separately. Without a dedicated recovery plan, a disaster can lead to the loss of that data.
+
+This guide describes the disaster recovery options for SonarQube and how they relate to the disaster recovery of the Alauda Container Platform (ACP) global cluster.
+
+## Disaster Recovery Options
+
+### Dedicated Disaster Recovery
+
+SonarQube provides a dedicated disaster recovery solution that lets you recover the SonarQube service in a secondary cluster after the primary cluster fails, with minimal data loss.
+
+For the architecture and detailed steps, refer to the Alauda Knowledge Base (KB).
+
+### Backup and Restore
+
+If you do not need the dedicated solution but want a recovery point to fall back to, use backup and restore. You periodically back up a SonarQube instance and restore it when needed. This gives an approximate disaster recovery capability, with a longer recovery time than the dedicated solution.
+
+For details, see [Backup and Recovery](./04_sonarqube_backup.mdx).
+
+## Relationship with ACP Global Cluster Disaster Recovery
+
+When SonarQube is deployed on the ACP global cluster, the disaster recovery of the global cluster and SonarQube's disaster recovery are two independent solutions. They do not depend on each other, and global cluster disaster recovery does **not** protect SonarQube:
+
+- Global cluster disaster recovery does not synchronize SonarQube resources, including SonarQube instances, their workloads and data, and the dependent middleware.
+- Global cluster disaster recovery does not recover SonarQube after a disaster.
+
+Therefore, even when SonarQube runs on the ACP global cluster, you must still plan its disaster recovery separately using one of the options above.

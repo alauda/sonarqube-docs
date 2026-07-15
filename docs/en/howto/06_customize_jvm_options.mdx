@@ -1,0 +1,82 @@
+---
+title: Customize JVM Options
+weight: 140
+---
+
+SonarQube runs three JVM processes inside the same Pod — the Web server (UI and Web API), the Compute Engine (background analysis tasks), and the Search component (embedded Elasticsearch). Each has its own `-Xmx` / `-Xms` budget. The defaults work for small deployments, but larger projects or higher scan concurrency often need more heap on the Web or Compute Engine side, and the Search heap usually has to be raised in lockstep with the project count.
+
+This how-to shows how to set per-process JVM options through the SonarQube CR and how to verify the change took effect.
+
+## Prerequisites
+
+- A running SonarQube instance managed by this operator.
+- Access to edit the `Sonarqube` custom resource.
+- Container resource limits on the SonarQube Pod that are large enough to accommodate the new heap budget — increasing `-Xmx` without raising the Pod's memory limit only moves the OOM failure one layer up.
+
+## Step 1 — Set the JVM options on the SonarQube CR
+
+Edit the SonarQube CR and add per-process Java options under `spec.helmValues.sonarProperties`. These three property names map one-to-one to the three SonarQube processes:
+
+| Property | Process | Typical use |
+| -------- | ------- | ----------- |
+| `sonar.web.javaOpts` | Web server | UI responsiveness, Web API throughput. |
+| `sonar.ce.javaOpts` | Compute Engine | Heap for background analysis tasks. Raise when scans of large projects fail with `OutOfMemoryError`. |
+| `sonar.search.javaOpts` | Embedded Elasticsearch | Index memory. Set `-Xms` equal to `-Xmx` so Elasticsearch does not resize the heap at runtime. |
+
+Example:
+
+```yaml
+apiVersion: operator.alaudadevops.io/v1alpha1
+kind: Sonarqube
+metadata:
+  name: <RELEASE>
+  namespace: <NAMESPACE>
+spec:
+  helmValues:
+    sonarProperties:
+      sonar.web.javaOpts: "-Xmx1G -Xms128m -XX:+HeapDumpOnOutOfMemoryError -server"
+      sonar.ce.javaOpts: "-Xmx2G"
+      sonar.search.javaOpts: "-Xmx2G -Xms2G"
+```
+
+Apply the change to the CR. The operator reconciles the change into the SonarQube ConfigMap on the next reconcile.
+
+## Step 2 — Verify the ConfigMap was updated
+
+The SonarQube process reads these options from a generated ConfigMap whose name ends with `-sonarqube-config`. Confirm the new values are present before restarting:
+
+```bash
+kubectl -n <NAMESPACE> get configmap <RELEASE>-sonarqube-config -o yaml \
+  | grep -E "sonar\.(web|ce|search)\.javaOpts"
+```
+
+If the keys still show the old values, wait a few seconds for the operator to reconcile and re-check. Do not move on until the ConfigMap reflects the new values.
+
+## Step 3 — Restart the SonarQube Pod
+
+The JVM options are read at process start, so the new values only take effect after a restart:
+
+```bash
+kubectl -n <NAMESPACE> rollout restart deployment <RELEASE>-sonarqube
+kubectl -n <NAMESPACE> rollout status deployment <RELEASE>-sonarqube
+```
+
+## Step 4 — Confirm the running JVMs use the new options
+
+In the SonarQube UI, go to **Administration → System** and expand the **Web**, **Compute Engine**, and **Search** sections. Each section reports the JVM flags actually in use — confirm that the `-Xmx` and `-Xms` values match what you set in Step 1.
+
+From the command line you can reach the same data by inspecting the running Java processes inside the Pod:
+
+```bash
+kubectl -n <NAMESPACE> exec <RELEASE>-sonarqube-xxxxx -- bash -lc \
+  "ps -ef | grep -E '(WebServer|CeServer|elasticsearch)' | tr ' ' '\n' | grep -E '^-X(mx|ms)'"
+```
+
+If the new flags do not appear, the most likely cause is that Step 2 was skipped — the Pod was restarted before the ConfigMap had been updated.
+
+## Notes
+
+- **About `helmValues.jvmOpts` / `jvmCeOpts`.** Older documentation also mentions chart-level fields `jvmOpts` and `jvmCeOpts`. In the chart bundled with this operator these are kept for backwards compatibility but are marked deprecated in the upstream values file, and they are explicitly **overridden** by `sonarProperties.sonar.web.javaOpts` / `sonar.ce.javaOpts` when both are set. There is no equivalent chart field for the Search process — use `sonarProperties.sonar.search.javaOpts`. Prefer the `sonarProperties` path for all three processes so the configuration stays consistent and survives chart upgrades.
+- **Keep `-Xmx` strictly below the Pod's memory limit.** A rough rule of thumb is `sum(web + ce + search -Xmx) + 25% headroom ≤ container memory limit`. Setting heaps that add up to the limit (or exceed it) leads to the Pod being OOM-killed when the JVM legitimately uses its full heap plus off-heap memory.
+- **Search heap.** Elasticsearch performs best with `-Xms` equal to `-Xmx`. Setting only `-Xmx` for `sonar.search.javaOpts` lets the heap resize at runtime, which causes brief stalls during large analyses.
+- **`HeapDumpOnOutOfMemoryError`.** Adding `-XX:+HeapDumpOnOutOfMemoryError` is recommended for the Web and Compute Engine processes when investigating intermittent OOM failures. The dump is written under the SonarQube working directory inside the Pod; copy it out with `kubectl cp` before the Pod is recreated.
