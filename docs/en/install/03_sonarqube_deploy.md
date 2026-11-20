@@ -37,6 +37,18 @@ Pre-deployment resource planning involves making decisions before deployment tha
 
 For more recommendations on environmental resources, please refer to the official documentation: https://docs.sonarsource.com/sonarqube-community-build/server-installation/server-host-requirements
 
+#### Sizing compute resources by code base size
+
+Size the CPU and memory of a SonarQube instance according to the amount of code it analyzes:
+
+- **Up to 1 million lines of code**: 2 CPU cores and 8 Gi memory are sufficient. This follows the small-size recommendation in the official [SonarQube Community Build server host requirements](https://docs.sonarsource.com/sonarqube-community-build/server-installation/server-host-requirements), which calls for 2 cores and at least 4 GB of memory, with 8 GB recommended for production.
+- **More than 1 million lines of code**: scale CPU and memory according to the larger sizes in the same official host requirements.
+- The `Production Template` (8 CPU cores, 16 Gi memory) is intended for these larger code bases.
+
+SonarQube Community Build processes analysis reports with a single Compute Engine worker, so adding CPU cores does not increase analysis throughput proportionally.
+
+When you change the memory limit, keep it consistent with the JVM heap settings of the Web, Compute Engine, and Search processes: the sum of their `-Xmx` values plus 25% headroom must fit within the container memory limit. See [Customize JVM Options](../howto/06_customize_jvm_options.mdx) for how to set the heap of each process.
+
 #### Do not use network storage as a storage backend
 
 Do not use network storage-backed StorageClass, PVC, or other remote-mounted storage for SonarQube persistence in production environments. SonarQube uses Elasticsearch internally, and the official SonarSource host requirements state that remote-mounted storage, such as NFS, SMB/CIFS, or NAS, should not be used for the SonarQube `data` directory because it is often slower, has higher latency variance, and becomes a single point of failure. The official document also describes the affected path as `<sonarqubeHome>/data`, where Elasticsearch indices are stored and where high I/O performance is required.
