@@ -42,7 +42,7 @@ For more recommendations on environmental resources, please refer to the officia
 Size the CPU and memory of a SonarQube instance according to the amount of code it analyzes:
 
 - **Up to 1 million lines of code**: 2 CPU cores and 8 Gi memory are sufficient. This follows the small-size recommendation in the official [SonarQube Community Build server host requirements](https://docs.sonarsource.com/sonarqube-community-build/server-installation/server-host-requirements), which calls for 2 cores and at least 4 GB of memory, with 8 GB recommended for production.
-- **More than 1 million lines of code**: scale CPU and memory according to the larger sizes in the same official host requirements.
+- **More than 1 million lines of code**: for a large-scale installation (up to 50 million lines of code), the same official host requirements call for 4 CPU cores and 16 GB of memory.
 - The `Production Template` (8 CPU cores, 16 Gi memory) is intended for these larger code bases.
 
 SonarQube Community Build processes analysis reports with a single Compute Engine worker, so adding CPU cores does not increase analysis throughput proportionally.
